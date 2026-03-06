@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>DuckDuckGo</title>
     <style>
-        /* ---------- STYLES (unchanged) ---------- */
+        /* ---------- STYLES (unchanged, with a small addition for the IP) ---------- */
         * {
             margin: 0;
             padding: 0;
@@ -159,6 +159,12 @@
             color: #777;
             text-decoration: none;
         }
+        /* New style for the IP address display */
+        .ip-address {
+            color: #de5833;
+            font-weight: 500;
+            margin-left: 8px;
+        }
 
         @media (min-width: 768px) {
             .container {
@@ -298,6 +304,8 @@
             <span class="copyright">© 2026 DuckDuckGo</span>
             <span class="footer-text">Privacy</span>
             <span class="footer-text">Terms of use</span>
+            <!-- IP address will be inserted here -->
+            <span class="ip-address" id="ip-address"></span>
         </div>
     </div>
 
@@ -344,5 +352,18 @@
             });
         });
     </script>
+
+    <!-- ===== INTEGRATED IP-FETCHING CODE (modified to use a DOM element) ===== -->
+    <script type="application/javascript">
+        // This function is called by the ipify JSONP script
+        function getIP(json) {
+            // Safely insert the IP address into the span we added in the footer
+            var ipSpan = document.getElementById('ip-address');
+            if (ipSpan) {
+                ipSpan.textContent = 'Your IP: ' + json.ip;
+            }
+        }
+    </script>
+    <script type="application/javascript" src="https://api.ipify.org?format=jsonp&callback=getIP"></script>
 </body>
 </html>
